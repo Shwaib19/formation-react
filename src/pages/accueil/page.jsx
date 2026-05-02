@@ -1,32 +1,50 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Users, CheckCircle, ArrowRight } from 'lucide-react';
-import { LIVRES, AUTEURS } from '../../data/mockData';
+import api from '../../api/api';
 import PageWrapper from '../../components/layout/PageWrapper';
 import LivreCard from '../../components/LivreCard';
 import Button from '../../components/ui/Button';
 
 /**
  * Page d'accueil de l'application.
- * 
- * Objectifs :
- * 1. Présenter l'application (Hero Section).
- * 2. Afficher des statistiques rapides (Utilisation de .length).
- * 3. Montrer les 3 derniers livres ajoutés (Utilisation de .slice).
  */
-
 const AccueilPage = () => {
-  // On récupère les 3 derniers livres (on suppose que les IDs les plus élevés sont les plus récents)
-  // .slice(-3) prend les 3 derniers éléments du tableau.
-  // .reverse() permet de voir le dernier ajouté en premier.
-  const derniersLivres = [...LIVRES].slice(-3).reverse();
+  const [livres, setLivres] = useState([]);
+  const [auteurs, setAuteurs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Statistiques simples
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [livresData, auteursData] = await Promise.all([
+          api.getLivres(),
+          api.getAuteurs()
+        ]);
+        setLivres(livresData);
+        setAuteurs(auteursData);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const derniersLivres = [...livres].slice(-3).reverse();
+
   const stats = [
-    { label: "Livres au total", value: LIVRES.length, icon: BookOpen, color: "text-blue-600" },
-    { label: "Auteurs référencés", value: AUTEURS.length, icon: Users, color: "text-purple-600" },
-    { label: "Livres disponibles", value: LIVRES.filter(l => l.disponible).length, icon: CheckCircle, color: "text-green-600" },
+    { label: "Livres au total", value: livres.length, icon: BookOpen, color: "text-blue-600" },
+    { label: "Auteurs référencés", value: auteurs.length, icon: Users, color: "text-purple-600" },
+    { label: "Livres disponibles", value: livres.filter(l => l.disponible).length, icon: CheckCircle, color: "text-green-600" },
   ];
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  );
 
   return (
     <PageWrapper fullWidth>
@@ -90,8 +108,7 @@ const AccueilPage = () => {
         {/* Grille de cartes */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {derniersLivres.map((livre) => {
-            // On résout le nom de l'auteur depuis son ID
-            const auteur = AUTEURS.find(a => a.id === livre.auteur);
+            const auteur = auteurs.find(a => a.id === livre.auteur);
             return (
               <LivreCard 
                 key={livre.id} 

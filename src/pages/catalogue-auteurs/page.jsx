@@ -1,33 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, UserX } from 'lucide-react';
-import { AUTEURS, LIVRES } from '../../data/mockData';
+import api from '../../api/api';
 import PageWrapper from '../../components/layout/PageWrapper';
 import AuteurCard from '../../components/AuteurCard';
 import SearchBar from '../../components/SearchBar';
 import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 
-/**
- * Page Catalogue des Auteurs.
- * 
- * Objectifs :
- * 1. Liste exhaustive des auteurs.
- * 2. Calcul du nombre de livres par auteur (Effectué par auteur au survol ou pré-calculé).
- * 3. Filtrage par nom.
- */
-
 const CatalogueAuteursPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [auteurs, setAuteurs] = useState([]);
+  const [livres, setLivres] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    const fetchData = async () => {
+      try {
+        const [auteursData, livresData] = await Promise.all([
+          api.getAuteurs(),
+          api.getLivres()
+        ]);
+        setAuteurs(auteursData);
+        setLivres(livresData);
+      } catch (error) {
+        console.error("Erreur de chargement", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   // FILTRAGE
-  const auteursFiltrés = AUTEURS.filter((auteur) => 
+  const auteursFiltrés = auteurs.filter((auteur) => 
     auteur.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -60,9 +66,7 @@ const CatalogueAuteursPage = () => {
       ) : auteursFiltrés.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {auteursFiltrés.map((auteur) => {
-            // On calcule dynamiquement le nombre de livres pour l'affichage
-            const nbLivres = LIVRES.filter(l => l.auteur === auteur.id).length;
-            
+            const nbLivres = livres.filter(l => l.auteur === auteur.id).length;
             return (
               <AuteurCard 
                 key={auteur.id} 

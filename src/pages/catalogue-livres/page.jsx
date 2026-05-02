@@ -1,41 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, FilterX } from 'lucide-react';
-import { LIVRES, AUTEURS } from '../../data/mockData';
+import api from '../../api/api';
 import PageWrapper from '../../components/layout/PageWrapper';
 import LivreCard from '../../components/LivreCard';
 import SearchBar from '../../components/SearchBar';
 import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 
-/**
- * Page Catalogue des Livres.
- * 
- * Objectifs :
- * 1. Lister tous les livres en combinant les données des livres et des auteurs.
- * 2. Gérer le filtrage en temps réel (Search et Disponibilité).
- * 3. Simuler un état de chargement initial.
- */
-
 const CatalogueLivresPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
+  
+  const [livres, setLivres] = useState([]);
+  const [auteurs, setAuteurs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Simulation d'un chargement réseau de 800ms au montage du composant
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    const fetchData = async () => {
+      try {
+        const [livresData, auteursData] = await Promise.all([
+          api.getLivres(),
+          api.getAuteurs()
+        ]);
+        setLivres(livresData);
+        setAuteurs(auteursData);
+      } catch (error) {
+        console.error("Erreur chargement livres/auteurs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   // FILTRAGE DES DONNÉES
-  // On filtre en fonction du terme de recherche ET de la disponibilité
-  const livresFiltrés = LIVRES.filter((livre) => {
-    // On résout le nom de l'auteur pour pouvoir aussi chercher par auteur
-    const auteur = AUTEURS.find(a => a.id === livre.auteur);
+  const livresFiltrés = livres.filter((livre) => {
+    const auteur = auteurs.find(a => a.id === livre.auteur);
     const matchesSearch = 
       livre.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      auteur?.nom.toLowerCase().includes(searchTerm.toLowerCase());
+      (auteur?.nom || "").toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesAvailable = showOnlyAvailable ? livre.disponible : true;
 
@@ -93,7 +97,7 @@ const CatalogueLivresPage = () => {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {livresFiltrés.map((livre) => {
-              const auteur = AUTEURS.find(a => a.id === livre.auteur);
+              const auteur = auteurs.find(a => a.id === livre.auteur);
               return (
                 <LivreCard 
                   key={livre.id} 

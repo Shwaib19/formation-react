@@ -1,20 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Save, X } from 'lucide-react';
-import { AUTEURS } from '../../data/mockData';
+import api from '../../api/api';
 import PageWrapper from '../../components/layout/PageWrapper';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
-
-/**
- * Page Ajouter un Livre (Formulaire).
- * 
- * Objectifs :
- * 1. Gérer un état local 'formData' pour les champs du formulaire.
- * 2. Valider les données côté client (Erreurs locales).
- * 3. Simuler une soumission d'API (POST).
- */
 
 const AjouterLivrePage = () => {
   const navigate = useNavigate();
@@ -27,10 +18,13 @@ const AjouterLivrePage = () => {
     disponible: true
   });
 
-  // État des erreurs de validation
+  const [auteurs, setAuteurs] = useState([]);
   const [errors, setErrors] = useState({});
 
-  // Handler universel pour les changements d'inputs
+  useEffect(() => {
+    api.getAuteurs().then(setAuteurs).catch(console.error);
+  }, []);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -38,13 +32,11 @@ const AjouterLivrePage = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
     
-    // On efface l'erreur du champ dès que l'utilisateur tape dedans
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  // Validation des champs
   const validate = () => {
     const newErrors = {};
     if (!formData.titre.trim()) newErrors.titre = "Le titre est obligatoire.";
@@ -56,31 +48,28 @@ const AjouterLivrePage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handler de soumission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    // Simulation d'appel API
-    console.log("Données envoyées : ", formData);
-    
-    // Dans une vraie app : fetch('/api/livres', { method: 'POST', body: JSON.stringify(formData) })
-    
-    // Redirection en cas de succès
-    navigate('/livres');
+    try {
+      await api.createLivre(formData);
+      navigate('/livres');
+    } catch (error) {
+      console.error(error);
+      alert("Erreur réseau");
+    }
   };
 
   return (
     <PageWrapper title="Nouveau livre">
       
-      {/* Retour */}
       <Link to="/livres" className="inline-flex items-center gap-2 text-text-muted hover:text-primary transition-colors mb-8 group">
         <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
         Annuler et revenir
       </Link>
 
       <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-        
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <Input 
@@ -98,7 +87,7 @@ const AjouterLivrePage = () => {
             name="auteur"
             value={formData.auteur}
             onChange={handleChange}
-            options={AUTEURS.map(a => ({ value: a.id, label: a.nom }))}
+            options={auteurs.map(a => ({ value: a.id, label: a.nom }))}
             placeholder="-- Choisir un auteur --"
             error={errors.auteur}
             required
@@ -114,7 +103,6 @@ const AjouterLivrePage = () => {
             required
           />
 
-          {/* Switch personnalisé pour la disponibilité */}
           <div className="flex items-center justify-between p-4 bg-surface rounded-xl border border-gray-100">
              <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${formData.disponible ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -134,7 +122,6 @@ const AjouterLivrePage = () => {
              />
           </div>
 
-          {/* Boutons d'action */}
           <div className="flex gap-4 pt-6 border-t border-gray-50">
              <Button 
                 variant="outline" 
@@ -156,7 +143,6 @@ const AjouterLivrePage = () => {
           </div>
 
         </form>
-
       </div>
 
     </PageWrapper>
